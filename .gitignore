@@ -1,0 +1,4 @@
+# Ignore config files with secrets
+appsettings.json
+bin/
+obj/
