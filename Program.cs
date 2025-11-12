@@ -12,9 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 // -------------------------------------------
 
 // Connects to Azure AD using settings in appsettings.json ("AzureAd" section)
-builder.Services.AddMicrosoftIdentityWebAppAuthentication(builder.Configuration, "AzureAd")
-    .EnableTokenAcquisitionToCallDownstreamApi()
-    .AddInMemoryTokenCaches();
+// builder.Services.AddMicrosoftIdentityWebAppAuthentication(builder.Configuration, "AzureAd")
+//     .EnableTokenAcquisitionToCallDownstreamApi()
+//     .AddInMemoryTokenCaches();
 
 // Register your Power BI service for dependency injection
 builder.Services.AddScoped<PowerBiServiceApi>();
@@ -23,10 +23,10 @@ builder.Services.AddScoped<PowerBiServiceApi>();
 // Require authentication globally for all MVC controllers
 builder.Services.AddControllersWithViews(options =>
 {
-    var policy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-    options.Filters.Add(new AuthorizeFilter(policy));
+    // var policy = new AuthorizationPolicyBuilder()
+    //     .RequireAuthenticatedUser()
+    //     .Build();
+    // options.Filters.Add(new AuthorizeFilter(policy));
 })
 .AddMicrosoftIdentityUI(); // adds Microsoft login/logout pages
 

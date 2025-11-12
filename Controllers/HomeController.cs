@@ -11,7 +11,7 @@ using AppOwnsData.Services;
 
 namespace AppOwnsData.Controllers
 {
-    [Authorize]
+    //[Authorize]
     public class HomeController : Controller
     {
         private PowerBiServiceApi powerBiServiceApi;
@@ -21,7 +21,7 @@ namespace AppOwnsData.Controllers
             this.powerBiServiceApi = powerBiServiceApi;
         }
 
-        [AllowAnonymous]
+       // [AllowAnonymous]
         public IActionResult Index()
         {
             return View();

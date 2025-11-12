@@ -1,66 +1,70 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Identity.Web;
-using Microsoft.Rest;
 using Microsoft.PowerBI.Api;
 using Microsoft.PowerBI.Api.Models;
-using Newtonsoft.Json;
+using Microsoft.Rest;
+using Microsoft.Identity.Client;
 
-namespace AppOwnsData.Services {
-
-    // A view model class to pass the data needed to embed a single report
-    public class EmbeddedReportViewModel {
+namespace AppOwnsData.Services
+{
+    // View model for embedded report
+    public class EmbeddedReportViewModel
+    {
         public string Id;
         public string Name;
         public string EmbedUrl;
         public string Token;
     }
 
-    public class PowerBiServiceApi {
+    public class PowerBiServiceApi
+    {
+        private readonly string clientId = Environment.GetEnvironmentVariable("POWERBI_CLIENT_ID");
+        private readonly string clientSecret = Environment.GetEnvironmentVariable("POWERBI_CLIENT_SECRET");
+        private readonly string tenantId = Environment.GetEnvironmentVariable("POWERBI_TENANT_ID");
+        private readonly string powerBiUrl = "https://api.powerbi.com/";
 
-        private ITokenAcquisition tokenAcquisition { get; }
-        private string urlPowerBiServiceApiRoot { get; }
+        private const string PowerBiScope = "https://analysis.windows.net/powerbi/api/.default";
 
-        public PowerBiServiceApi(IConfiguration configuration, ITokenAcquisition tokenAcquisition) {
-            this.urlPowerBiServiceApiRoot = configuration["PowerBi:ServiceRootUrl"];
-            this.tokenAcquisition = tokenAcquisition;
+        // Get app-only access token
+        private async Task<string> GetAccessTokenAsync()
+        {
+            var app = ConfidentialClientApplicationBuilder
+                .Create(clientId)
+                .WithClientSecret(clientSecret)
+                .WithAuthority(new Uri($"https://login.microsoftonline.com/{tenantId}"))
+                .Build();
+
+            var result = await app.AcquireTokenForClient(new[] { PowerBiScope }).ExecuteAsync();
+            return result.AccessToken;
         }
 
-        public const string powerbiApiDefaultScope = "https://analysis.windows.net/powerbi/api/.default";
-
-        // A method to get the Azure AD token (also known as 'access token')
-        public string GetAccessToken() {
-            return this.tokenAcquisition.GetAccessTokenForAppAsync(powerbiApiDefaultScope).Result;
+        // Get Power BI client
+        private async Task<PowerBIClient> GetPowerBiClientAsync()
+        {
+            var token = await GetAccessTokenAsync();
+            var tokenCredentials = new TokenCredentials(token, "Bearer");
+            return new PowerBIClient(new Uri(powerBiUrl), tokenCredentials);
         }
 
-        public PowerBIClient GetPowerBiClient() {
-            var tokenCredentials = new TokenCredentials(GetAccessToken(), "Bearer");
-            return new PowerBIClient(new Uri(urlPowerBiServiceApiRoot), tokenCredentials);
-        }
+        // Get embedded report info
+        public async Task<EmbeddedReportViewModel> GetReport(Guid workspaceId, Guid reportId)
+        {
+            var pbiClient = await GetPowerBiClientAsync();
 
-        public async Task<EmbeddedReportViewModel> GetReport(Guid WorkspaceId, Guid ReportId) {
+            // Get report
+            var report = await pbiClient.Reports.GetReportInGroupAsync(workspaceId, reportId);
 
-            PowerBIClient pbiClient = GetPowerBiClient();
+            // Generate embed token
+            var tokenRequest = new GenerateTokenRequest(TokenAccessLevel.View, report.DatasetId);
+            var embedTokenResponse = await pbiClient.Reports.GenerateTokenAsync(workspaceId, reportId, tokenRequest);
 
-            // Call the Power BI service API to get the embedding data.
-            var report = await pbiClient.Reports.GetReportInGroupAsync(WorkspaceId, ReportId);
-
-            // Generate a read-only embed token for the report.
-            var datasetId = report.DatasetId;
-            var tokenRequest = new GenerateTokenRequest(TokenAccessLevel.View, datasetId);
-            var embedTokenResponse = await pbiClient.Reports.GenerateTokenAsync(WorkspaceId, ReportId, tokenRequest);
-            var embedToken = embedTokenResponse.Token;
-
-            // Return the report embedded data to caller.
-            return new EmbeddedReportViewModel {
+            return new EmbeddedReportViewModel
+            {
                 Id = report.Id.ToString(),
                 EmbedUrl = report.EmbedUrl,
                 Name = report.Name,
-                Token = embedToken
+                Token = embedTokenResponse.Token
             };
         }
-
     }
 }
