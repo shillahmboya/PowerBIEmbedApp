@@ -31,7 +31,7 @@ namespace AppOwnsData.Controllers
 
             // Replace these two GUIDs with the workspace ID and report ID you recorded earlier.
             Guid workspaceId = new Guid("f91c9eb1-77c1-4e6f-a351-dc2af802f18d");
-            Guid reportId = new Guid("5e2c954e-c6cf-495e-add1-bd61389afa8b");
+            Guid reportId = new Guid("bbc715b4-4b97-4498-8ed0-145d5bf49fdd");
 
             var viewModel = await powerBiServiceApi.GetReport(workspaceId, reportId);
 
